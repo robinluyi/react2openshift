@@ -1,0 +1,90 @@
+* { /* 选择器：所有元素 */ 
+  box-sizing: border-box; /* 将元素的宽高计算方式改为包含 padding 和 border，避免因内边距或边框影响布局 */ 
+}
+
+body { /* 针对 <body> 元素的样式 */ 
+  font-family: sans-serif; /* 设置默认字体族为无衬线字体，影响页面文本外观 */ 
+  margin: 20px; /* 设置页面外边距为 20px，页面内容与窗口边缘保持间距 */ 
+  padding: 0; /* 清除默认内边距，避免浏览器默认样式干扰布局 */ 
+}
+
+h1 { /* 针对所有 h1 标题 */ 
+  margin-top: 0; /* 将顶部外边距设为 0，防止与上方元素产生间隙 */ 
+  font-size: 22px; /* 设置 h1 的字体大小为 22 像素 */ 
+}
+
+h2 { /* 针对所有 h2 标题 */ 
+  margin-top: 0; /* 顶部外边距为 0，以保持一致的垂直间距 */ 
+  font-size: 20px; /* 设置 h2 的字体大小为 20 像素 */ 
+}
+
+h3 { /* 针对所有 h3 标题 */ 
+  margin-top: 0; /* 顶部外边距为 0 */ 
+  font-size: 18px; /* 设置 h3 的字体大小为 18 像素 */ 
+}
+
+h4 { /* 针对所有 h4 标题 */ 
+  margin-top: 0; /* 顶部外边距为 0 */ 
+  font-size: 16px; /* 设置 h4 的字体大小为 16 像素 */ 
+}
+
+h5 { /* 针对所有 h5 标题 */ 
+  margin-top: 0; /* 顶部外边距为 0 */ 
+  font-size: 14px; /* 设置 h5 的字体大小为 14 像素 */ 
+}
+
+h6 { /* 针对所有 h6 标题 */ 
+  margin-top: 0; /* 顶部外边距为 0 */ 
+  font-size: 12px; /* 设置 h6 的字体大小为 12 像素 */ 
+}
+
+code { /* 针对 <code> 内联代码片段 */ 
+  font-size: 1.2em; /* 将代码字体放大到父字体的 1.2 倍，使其更易读 */ 
+}
+
+ul { /* 针对无序列表 <ul> */ 
+  padding-inline-start: 20px; /* 设置左侧内边距（或开始方向内边距）为 20px，控制列表缩进 */ 
+}
+
+* { /* 再次选择所有元素（与文件前面重复） */ 
+  box-sizing: border-box; /* 再次确保所有元素使用 border-box 盒模型 */ 
+}
+
+body { /* 再次针对 body（与前面重复） */ 
+  font-family: sans-serif; /* 再次设置默认字体族 */ 
+  margin: 20px; /* 再次设置页面外边距 */ 
+  padding: 0; /* 再次清除内边距 */ 
+}
+
+.square { /* .square 类，通常表示棋盘格或方块 */ 
+  background: #fff; /* 设置背景色为白色 */ 
+  border: 1px solid #999; /* 设置 1px 实线边框，颜色为灰色 (#999) */ 
+  float: left; /* 使用浮动使方块横向排列（老式布局方式） */ 
+  font-size: 24px; /* 设置方块内文本的字体大小为 24px */ 
+  font-weight: bold; /* 设置文本为粗体 */ 
+  line-height: 34px; /* 行高为 34px，常用于垂直居中文本（与高度一致） */ 
+  height: 34px; /* 固定方块高度为 34px */ 
+  margin-right: -1px; /* 右外边距设为 -1px，用来抵消相邻边框的间隙，避免双线 */ 
+  margin-top: -1px; /* 顶部外边距设为 -1px，同上用于紧密拼接 */ 
+  padding: 0; /* 清除内边距，确保文本垂直居中由 line-height 控制 */ 
+  text-align: center; /* 文本水平居中 */ 
+  width: 34px; /* 固定方块宽度为 34px */ 
+}
+
+.board-row:after { /* 伪元素，用于清除 .board-row 内的浮动 */ 
+   clear: both; /* 清除左右浮动，保证后续内容正常排列 */ 
+   content: ''; /* 生成一个空的内容，激活伪元素 */ 
+   display: table; /* 使伪元素成为块级上下文，从而触发清除效果 */ 
+}
+
+.status { /* .status 类，通常用于显示游戏状态文本 */ 
+  margin-bottom: 10px; /* 在状态文本下方添加 10px 外边距，与下面内容保持间距 */ 
+}
+.game { /* .game 容器，包含棋盘与信息等 */ 
+  display: flex; /* 使用 Flexbox 布局，便于横向或纵向排列子元素 */ 
+  flex-direction: row; /* 将子元素沿行（水平）方向排列 */ 
+}
+
+.game-info { /* .game-info，用于显示额外信息（例如步数或历史） */ 
+  margin-left: 20px; /* 在左侧添加 20px 外边距，使其与棋盘分开 */ 
+}
