@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
       # 1️⃣ 拉取 GitHub 代码
@@ -16,7 +16,7 @@ jobs:
 
       # 2️⃣ 登录 OpenShift（自动安装 oc CLI）
       - name: Login to OpenShift
-        uses: redhat-actions/oc-login@v1.3
+        uses: redhat-actions/oc-login@v1
         with:
           openshift_server_url: https://api.rm2.thpm.p1.openshiftapps.com:6443
           openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
