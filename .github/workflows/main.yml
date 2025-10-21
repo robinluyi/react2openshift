@@ -1,0 +1,20 @@
+name: OpenShift Build Trigger
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to OpenShift
+        run: |
+          oc login https://api.rm2.thpm.p1.openshiftapps.com:6443 \
+            --token=$OPENSHIFT_TOKEN \
+            --insecure-skip-tls-verify=true
+
+      - name: Trigger build
+        run: |
+          oc start-build react2openshift -n robinluyi-dev --follow
