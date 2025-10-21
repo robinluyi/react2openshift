@@ -3,45 +3,110 @@ name: OpenShift CI/CD - React App
 on:
   push:
     branches:
-      - main   # 监听 main 分支推送，可按需修改
+      - main
+
+env:
+  # Put these in GitHub Secrets: OPENSHIFT_SERVER_URL, OPENSHIFT_TOKEN
+  OPENSHIFT_SERVER_URL: ${{ secrets.OPENSHIFT_SERVER_URL }}
+  OPENSHIFT_TOKEN: ${{ secrets.OPENSHIFT_TOKEN }}
+  NAMESPACE: robinluyi-dev
+  APP: react2openshift
+  OC_VERSION: "4.14.0"
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
-      # 1️⃣ 拉取 GitHub 代码
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      # 2️⃣ 登录 OpenShift（自动安装 oc CLI）
-      - name: Login to OpenShift
-        uses: redhat-actions/oc-login@v1
+      - name: Install oc CLI & Login to OpenShift
+        uses: redhat-actions/oc-login@v2
         with:
-          openshift_server_url: https://api.rm2.thpm.p1.openshiftapps.com:6443
-          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          openshift_server_url: ${{ env.OPENSHIFT_SERVER_URL }}
+          openshift_token: ${{ env.OPENSHIFT_TOKEN }}
           insecure_skip_tls_verify: true
-          namespace: robinluyi-dev
+          namespace: ${{ env.NAMESPACE }}
+          oc_version: ${{ env.OC_VERSION }}
 
-      # 3️⃣ 触发 BuildConfig 构建
-      - name: Trigger OpenShift Build
+      - name: Diagnostic - oc and cluster info
         run: |
-          echo "Starting new build for react2openshift..."
-          oc start-build react2openshift -n robinluyi-dev --follow --wait || {
-            echo "❌ Build failed!"; 
-            exit 1;
-          }
+          echo "=== oc version ==="
+          oc version || true
+          echo "=== whoami & project ==="
+          oc whoami || true
+          oc project || true
+          echo "=== Namespace check ==="
+          oc get namespace "${NAMESPACE}" || echo "Namespace ${NAMESPACE} not found or no permissions"
+          echo "=== Existing BuildConfigs ==="
+          oc get bc -n "${NAMESPACE}" || true
+          echo "=== Existing Deployments/DeploymentConfigs ==="
+          oc get deployment -n "${NAMESPACE}" || true
+          oc get dc -n "${NAMESPACE}" || true
 
-      # 4️⃣ 可选：等待部署完成（CD 自动化）
-      - name: Wait for deployment rollout
+      - name: Ensure BuildConfig exists (fail fast with useful info)
         run: |
-          echo "Waiting for deployment rollout..."
-          oc rollout status deployment/react2openshift -n robinluyi-dev --timeout=180s || {
-            echo "⚠️ Deployment rollout timed out.";
-          }
+          set -euo pipefail
+          if ! oc get bc "${APP}" -n "${NAMESPACE}" >/dev/null 2>&1; then
+            echo "❌ BuildConfig '${APP}' not found in namespace ${NAMESPACE}."
+            echo "Listing resources to help debugging:"
+            oc get all -n "${NAMESPACE}" || true
+            echo "If you don't have a BuildConfig, create one with oc new-build or apply a BuildConfig YAML."
+            exit 1
+          fi
 
-      # 5️⃣ 可选：显示部署状态
-      - name: Get current app route
+      - name: Trigger Build (with retries and log collection)
         run: |
-          echo "✅ Build & Deployment completed."
-          oc get route react2openshift -n robinluyi-dev -o jsonpath='{.spec.host}'
+          set -euo pipefail
+          attempts=3
+          for i in $(seq 1 $attempts); do
+            echo "Starting build attempt #${i}..."
+            if oc start-build "${APP}" -n "${NAMESPACE}" --follow --wait; then
+              echo "✅ Build succeeded."
+              break
+            else
+              echo "❌ start-build failed on attempt #${i}."
+              LAST_BUILD=$(oc get builds -n "${NAMESPACE}" --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}' 2>/dev/null || true)
+              if [ -n "$LAST_BUILD" ]; then
+                echo "=== Logs for build/${LAST_BUILD} ==="
+                oc logs build/"${LAST_BUILD}" -n "${NAMESPACE}" || true
+              else
+                echo "No builds found to show logs for."
+              fi
+            fi
+
+            if [ "$i" -lt "$attempts" ]; then
+              echo "Retrying in 5s..."
+              sleep 5
+            else
+              echo "All attempts failed. Exiting."
+              exit 1
+            fi
+          done
+
+      - name: Wait for rollout (supports Deployment and DeploymentConfig)
+        run: |
+          set -euo pipefail
+          echo "Waiting for workload to roll out for ${APP} in ${NAMESPACE}..."
+          if oc get deployment "${APP}" -n "${NAMESPACE}" >/dev/null 2>&1; then
+            oc rollout status deployment/"${APP}" -n "${NAMESPACE}" --timeout=300s
+            echo "Deployment rollout finished."
+          elif oc get dc "${APP}" -n "${NAMESPACE}" >/dev/null 2>&1; then
+            oc rollout status dc/"${APP}" -n "${NAMESPACE}" --timeout=300s
+            echo "DeploymentConfig rollout finished."
+          else
+            echo "⚠️ No Deployment or DeploymentConfig named '${APP}' found in namespace ${NAMESPACE}."
+            oc get all -n "${NAMESPACE}" || true
+            exit 1
+          fi
+
+      - name: Show route / app host and service info
+        run: |
+          echo "=== Route (host) for ${APP} ==="
+          oc get route "${APP}" -n "${NAMESPACE}" -o jsonpath='{.spec.host}' || echo "Route not found"
+          echo
+          echo "=== Services / Pods ==="
+          oc get svc -n "${NAMESPACE}" | grep "${APP}" || true
+          oc get pods -n "${NAMESPACE}" --selector app="${APP}" -o wide || oc get pods -n "${NAMESPACE}" -o wide || true
