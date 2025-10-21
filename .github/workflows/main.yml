@@ -18,7 +18,7 @@ jobs:
       - name: Login to OpenShift
         uses: redhat-actions/oc-login@v1.3
         with:
-          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER_URL }}
+          openshift_server_url: https://api.rm2.thpm.p1.openshiftapps.com:6443
           openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
           insecure_skip_tls_verify: true
           namespace: robinluyi-dev
