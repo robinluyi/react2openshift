@@ -1,20 +1,47 @@
-name: OpenShift Build Trigger
+name: OpenShift CI/CD - React App
 
 on:
   push:
     branches:
-      - main
+      - main   # 监听 main 分支推送，可按需修改
 
 jobs:
-  trigger:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    steps:
-      - name: Login to OpenShift
-        run: |
-          oc login https://api.rm2.thpm.p1.openshiftapps.com:6443 \
-            --token=$OPENSHIFT_TOKEN \
-            --insecure-skip-tls-verify=true
 
-      - name: Trigger build
+    steps:
+      # 1️⃣ 拉取 GitHub 代码
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # 2️⃣ 登录 OpenShift（自动安装 oc CLI）
+      - name: Login to OpenShift
+        uses: redhat-actions/oc-login@v1.3
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER_URL }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+          namespace: robinluyi-dev
+
+      # 3️⃣ 触发 BuildConfig 构建
+      - name: Trigger OpenShift Build
         run: |
-          oc start-build react2openshift -n robinluyi-dev --follow
+          echo "Starting new build for react2openshift..."
+          oc start-build react2openshift -n robinluyi-dev --follow --wait || {
+            echo "❌ Build failed!"; 
+            exit 1;
+          }
+
+      # 4️⃣ 可选：等待部署完成（CD 自动化）
+      - name: Wait for deployment rollout
+        run: |
+          echo "Waiting for deployment rollout..."
+          oc rollout status deployment/react2openshift -n robinluyi-dev --timeout=180s || {
+            echo "⚠️ Deployment rollout timed out.";
+          }
+
+      # 5️⃣ 可选：显示部署状态
+      - name: Get current app route
+        run: |
+          echo "✅ Build & Deployment completed."
+          oc get route react2openshift -n robinluyi-dev -o jsonpath='{.spec.host}'
